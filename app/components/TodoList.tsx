@@ -8,7 +8,8 @@ interface InitialTodos {
 }
 
 const TodoList: React.FC<InitialTodos> = ({ initialTodos }) => {
-    const [todos, setTodos] = useState<Todo[]>(initialTodos);
+    // Initial implementation used the three random todos which were passed along to this child
+    const [todos, setTodos] = useState<Todo[]>(initialTodos); 
     const [title, setTitle] = useState('');
     const [error, setError] = useState('');
     const [edit, setEdit] = useState<number | null>(null);
@@ -22,16 +23,20 @@ const TodoList: React.FC<InitialTodos> = ({ initialTodos }) => {
             try{
                 const response = await fetch(url);
                 if(!response.ok) {
-                    throw new Error("Failed to fetch todos");
+                    throw new Error("Failed to fetch todos, service is down");
                 }
                 const data = await response.json();
-                setTodos((prevData) => [...prevData, ...data]);
-            } catch (err) {
-                return <Err error={err}  />
+                setTodos(data);
+            } catch (err: any) {
+                setError(String(err));
             }
         }
         fetchTodos();
     }, [])
+
+    if(error) {
+        return <Err error={error} />
+    }
 
     const addTodo = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -83,21 +88,21 @@ const TodoList: React.FC<InitialTodos> = ({ initialTodos }) => {
     const toggleComplete = async (id: number) => {
         
         /*
-        intial logic:
+        //intial logic:
         setTodos((prevTodos) => 
             prevTodos.map((todo) => 
                 todo.id === id ? {...todo, completed: !todo.completed} : todo
         ))*/
         
-        const updatedTodos = todos.map((todo) => 
-            todo.id === id ? {...todo, completed: !todo.completed} : todo
-        )
+        const index = todos.findIndex((todo) => todo.id == id);
+        todos[index].completed = !todos[index].completed;
+
         const response = await fetch(url, {
             method: 'PUT',
             headers: {
                 'Content-type' : 'application/json',
             },
-            body: JSON.stringify(updatedTodos)
+            body: JSON.stringify(todos[index])
         })
         if(!response.ok){
             alert('failed to toggle complete');
@@ -105,7 +110,6 @@ const TodoList: React.FC<InitialTodos> = ({ initialTodos }) => {
         }
         const newTodos = await response.json();
         setTodos(newTodos);
-        //fetchTodos();
     }
 
     const handleEdit = async (e: React.FormEvent, t: Todo) => {
@@ -121,20 +125,19 @@ const TodoList: React.FC<InitialTodos> = ({ initialTodos }) => {
                     t === todo ? {...t, title: newTitle} : t
                 )
             )*/
-
-            const updatedTodos = todos.map((todo) => 
-                todo.id === t.id ? {...todo, title: newTitle} : todo
-            )
+           
+            const index = todos.findIndex((todo) => todo.id == t.id);
+            todos[index].title = newTitle;
 
             const response = await fetch(url, {
                 method: 'PUT',
                 headers: {
                     'Content-type' : 'application/json',
                 },
-                body: JSON.stringify(updatedTodos)
+                body: JSON.stringify(todos[index])
             })
             if(!response.ok){
-                alert('failed to toggle complete');
+                alert('failed to edit');
                 return;
             }
             const newTodos = await response.json();
